@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TICONDEROGA</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Special+Elite&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A94A;
+  --gold2: #e8c96a;
+  --amber: #ff9900;
+  --black: #050401;
+  --screen: #0a0800;
+  --crt: #111005;
+  --pixel: #1a1500;
+  --tape: #1c1408;
+  --text: #d4b86a;
+  --dim: #5a4a20;
+  --muted: #3a2e10;
+  --red: #cc2200;
+  --green: #44aa00;
+  --scanline: rgba(0,0,0,0.35);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--text);
+  font-family: 'VT323', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* CUSTOM CURSOR - quill tip */
+.cursor {
+  position: fixed;
+  width: 4px;
+  height: 4px;
+  background: var(--gold2);
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 6px var(--gold2), 0 0 12px var(--amber);
+  transition: transform 0.05s;
+}
+.cursor-trail {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9998;
+  font-size: 10px;
+  color: var(--gold);
+  opacity: 0;
+  font-family: 'Special Elite', serif;
+  white-space: nowrap;
+}
+
+/* CRT SCREEN EFFECT */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    var(--scanline) 2px,
+    var(--scanline) 4px
+  );
+  pointer-events: none;
+  z-index: 500;
+  mix-blend-mode: multiply;
+}
+
+/* Screen flicker */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+  pointer-events: none;
+  z-index: 501;
+}
+
+/* ATARI PIXEL BORDER FRAME */
+.atari-frame {
+  position: fixed;
+  inset: 0;
+  border: 8px solid var(--pixel);
+  outline: 2px solid var(--dim);
+  pointer-events: none;
+  z-index: 490;
+}
+.atari-frame::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 2px solid var(--muted);
+}
+
+/* HEADER / CARTRIDGE SLOT */
+header {
+  padding: 24px 32px 16px;
+  border-bottom: 4px solid var(--pixel);
+  position: relative;
+  background: var(--crt);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  image-rendering: pixelated;
+}
+
+header::before {
+  content: '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  font-size: 4px;
+  color: var(--muted);
+  letter-spacing: 0;
+  line-height: 1;
+  overflow: hidden;
+  width: 100%;
+}
+
+.logo-pixel {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(10px, 2.5vw, 18px);
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+  text-shadow: 3px 3px 0 var(--red), -1px -1px 0 #000;
+  animation: flicker 8s ease-in-out infinite;
+}
+
+.logo-pixel span {
+  display: block;
+  font-family: 'VT323', monospace;
+  font-size: clamp(10px, 1.5vw, 13px);
+  color: var(--dim);
+  letter-spacing: 0.2em;
+  margin-top: 4px;
+  text-shadow: none;
+}
+
+@keyframes flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.7; }
+  97% { opacity: 1; }
+  98% { opacity: 0.5; }
+  99% { opacity: 1; }
+}
+
+nav {
+  display: flex;
+  gap: 20px;
+}
+
+nav a {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--dim);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: color 0.1s, text-shadow 0.1s;
+  padding: 4px;
+}
+nav a:hover {
+  color: var(--amber);
+  text-shadow: 0 0 8px var(--amber);
+}
+
+/* TAPE COUNTER STRIP */
+.tape-counter {
+  background: var(--tape);
+  border-bottom: 3px solid var(--pixel);
+  padding: 8px 32px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  overflow: hidden;
+}
+
+.counter-display {
+  background: #000;
+  border: 2px solid var(--dim);
+  padding: 4px 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: var(--amber);
+  text-shadow: 0 0 8px var(--amber);
+  letter-spacing: 0.1em;
+  min-width: 100px;
+  text-align: center;
+}
+
+.tape-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: rec-blink 1s step-end infinite;
+}
+
+@keyframes rec-blink {
+  0%, 100% { opacity: 1; background: var(--red); }
+  50% { opacity: 0.2; }
+}
+
+.tape-scroll {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.tape-text {
+  display: inline-block;
+  white-space: nowrap;
+  animation: scroll-tape 35s linear infinite;
+  color: var(--dim);
+  font-size: 16px;
+  letter-spacing: 0.15em;
+}
+
+@keyframes scroll-tape {
+  from { transform: translateX(100vw); }
+  to { transform: translateX(-100%); }
+}
+
+/* HERO — THE TAPE UNSPOOLING */
+.hero {
+  min-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 60px 48px 40px;
+  position: relative;
+  background: var(--screen);
+}
+
+/* Pixel grid background */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--pixel) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pixel) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.4;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+}
+
+/* THE TAPE UNSPOOLING QUILL ANIMATION */
+.quill-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.quill-text {
+  font-family: 'Special Elite', serif;
+  font-size: clamp(12px, 2vw, 18px);
+  color: var(--dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  animation: typeIn 1s steps(20, end) forwards;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 0;
+}
+
+.quill-text.delay1 { animation-delay: 0.3s; }
+.quill-text.delay2 { animation-delay: 0.5s; }
+
+@keyframes typeIn {
+  from { width: 0; opacity: 0.3; }
+  to { width: 100%; opacity: 1; }
+}
+
+/* ATARI HERO TEXT */
+h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(22px, 5.5vw, 64px);
+  line-height: 1.3;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  margin: 32px 0 24px;
+  text-shadow: 4px 4px 0 #000, 2px 2px 0 var(--red);
+  animation: fadePixel 0.5s steps(8) forwards;
+  animation-delay: 0.8s;
+  opacity: 0;
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--gold2);
+  display: block;
+  text-shadow: 4px 4px 0 #000, 0 0 20px var(--amber);
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 4px 4px 0 #000, 0 0 20px var(--amber); }
+  50% { text-shadow: 4px 4px 0 #000, 0 0 40px var(--amber), 0 0 60px var(--gold); }
+}
+
+@keyframes fadePixel {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+/* CASSETTE TAPE VISUAL */
+.cassette {
+  margin: 40px 0;
+  background: var(--tape);
+  border: 3px solid var(--dim);
+  border-radius: 4px;
+  padding: 20px 28px;
+  max-width: 560px;
+  position: relative;
+  animation: fadePixel 0.5s steps(4) forwards;
+  animation-delay: 1.4s;
+  opacity: 0;
+  box-shadow: 4px 4px 0 #000, inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.cassette::before {
+  content: 'TICONDEROGA SYSTEMS · SIDE A';
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  font-family: 'Special Elite', serif;
+  font-size: 10px;
+  color: var(--gold);
+  background: var(--tape);
+  padding: 0 8px;
+  letter-spacing: 0.2em;
+}
+
+.cassette-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reel {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--dim);
+  position: relative;
+  flex-shrink: 0;
+  animation: spin-reel 3s linear infinite;
+  background: var(--black);
+}
+
+.reel::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+}
+
+.reel::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--dim);
+  box-shadow: 0 0 4px var(--amber);
+}
+
+@keyframes spin-reel {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tape-ribbon {
+  flex: 1;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--amber) 0px, var(--amber) 4px,
+    var(--dim) 4px, var(--dim) 8px
+  );
+  opacity: 0.6;
+  position: relative;
+}
+
+.tape-ribbon::after {
+  content: '▶ PLAYING';
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--green);
+  text-shadow: 0 0 6px var(--green);
+  letter-spacing: 0.2em;
+  animation: rec-blink 2s step-end infinite;
+}
+
+.cassette-label {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  line-height: 1.6;
+}
+
+.cassette-label strong {
+  display: block;
+  color: var(--amber);
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+/* HERO SUBTEXT */
+.hero-sub {
+  font-family: 'Special Elite', serif;
+  font-size: clamp(13px, 1.8vw, 17px);
+  line-height: 1.9;
+  color: var(--dim);
+  max-width: 580px;
+  animation: fadePixel 0.5s steps(4) forwards;
+  animation-delay: 1.8s;
+  opacity: 0;
+}
+
+.hero-sub strong { color: var(--text); }
+
+/* PIXEL DIVIDER */
+.px-divider {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.4;
+}
+
+/* SYSTEMS GRID */
+.systems {
+  padding: 60px 48px;
+  background: var(--crt);
+  border-top: 4px solid var(--pixel);
+}
+
+.sys-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sys-header::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--pixel);
+}
+
+.sys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 3px;
+}
+
+.sys-card {
+  background: var(--screen);
+  border: 2px solid var(--pixel);
+  padding: 28px 24px;
+  position: relative;
+  transition: border-color 0.1s;
+  cursor: default;
+  overflow: hidden;
+}
+
+.sys-card::before {
+  content: attr(data-id);
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 28px;
+  color: var(--pixel);
+  line-height: 1;
+}
+
+.sys-card:hover {
+  border-color: var(--amber);
+  box-shadow: inset 0 0 20px rgba(255,153,0,0.05), 0 0 0 1px var(--amber);
+}
+
+.sys-card:hover .sys-tag { color: var(--amber); }
+
+.sys-tag {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+  transition: color 0.1s;
+}
+
+.sys-title {
+  font-family: 'VT323', monospace;
+  font-size: 28px;
+  color: var(--text);
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  line-height: 1.1;
+}
+
+.sys-body {
+  font-family: 'Special Elite', serif;
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+/* ORIGIN — THE QUILL WRITES */
+.origin {
+  background: var(--tape);
+  border-top: 4px solid var(--pixel);
+  border-bottom: 4px solid var(--pixel);
+  padding: 72px 48px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 64px;
+  align-items: start;
+  position: relative;
+  overflow: hidden;
+}
+
+.origin::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--pixel) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pixel) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0.2;
+}
+
+.origin-atari {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(36px, 6vw, 72px);
+  color: var(--pixel);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  position: relative;
+  z-index: 1;
+  text-shadow: 3px 3px 0 #000;
+  user-select: none;
+}
+
+.origin-atari span { color: var(--gold); }
+
+.origin-content {
+  position: relative;
+  z-index: 1;
+}
+
+.origin-tag {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.origin-tag::before { content: '▶'; color: var(--amber); }
+
+/* THE QUILL WRITING EFFECT */
+.quill-write {
+  font-family: 'Special Elite', serif;
+  font-size: clamp(13px, 1.6vw, 16px);
+  line-height: 2;
+  color: var(--dim);
+  position: relative;
+}
+
+.quill-write p { margin-bottom: 16px; }
+.quill-write strong { color: var(--text); }
+
+.quill-write::after {
+  content: '|';
+  color: var(--gold2);
+  animation: cursor-blink 0.8s step-end infinite;
+  text-shadow: 0 0 8px var(--gold2);
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* CTA */
+.cta {
+  padding: 80px 48px;
+  text-align: center;
+  background: var(--screen);
+  border-top: 4px solid var(--pixel);
+  position: relative;
+}
+
+.cta h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(16px, 3.5vw, 36px);
+  letter-spacing: 0.05em;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.4;
+  text-shadow: 3px 3px 0 #000;
+}
+
+.cta p {
+  font-family: 'Special Elite', serif;
+  font-size: 15px;
+  color: var(--dim);
+  margin-bottom: 40px;
+}
+
+.btn-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 16px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.1s;
+  border: none;
+  position: relative;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: var(--black);
+  box-shadow: 4px 4px 0 var(--red);
+}
+.btn-primary:hover {
+  background: var(--amber);
+  box-shadow: 2px 2px 0 var(--red);
+  transform: translate(2px, 2px);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--dim);
+  border: 2px solid var(--pixel);
+  box-shadow: 4px 4px 0 #000;
+}
+.btn-ghost:hover {
+  border-color: var(--dim);
+  color: var(--text);
+  box-shadow: 2px 2px 0 #000;
+  transform: translate(2px, 2px);
+}
+
+/* FOOTER */
+footer {
+  background: var(--crt);
+  border-top: 4px solid var(--pixel);
+  padding: 20px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.f-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.1em;
+}
+
+.f-copy {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+}
+
+.f-node {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--pixel);
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 640px) {
+  header { padding: 16px; }
+  nav { display: none; }
+  .hero { padding: 40px 20px; }
+  .systems { padding: 40px 20px; }
+  .origin { grid-template-columns: 1fr; padding: 40px 20px; gap: 32px; }
+  .cta { padding: 60px 20px; }
+  footer { padding: 16px 20px; }
+  .tape-counter { padding: 8px 16px; }
+}
+
+/* PIXEL ART SPRITE (decorative) */
+.sprite {
+  font-size: 8px;
+  line-height: 1;
+  color: var(--gold);
+  opacity: 0.4;
+  position: absolute;
+  right: 48px;
+  top: 50%;
+  transform: translateY(-50%);
+  letter-spacing: 0;
+  pointer-events: none;
+  display: none;
+}
+
+@media (min-width: 900px) { .sprite { display: block; } }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="atari-frame"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-pixel">
+    TICONDEROGA
+    <span>ticonderoga.online · systems holdings</span>
+  </div>
+  <nav>
+    <a href="#">WORK</a>
+    <a href="#">SYS</a>
+    <a href="#">ORIGIN</a>
+    <a href="#">CONNECT</a>
+  </nav>
+</header>
+
+<!-- TAPE COUNTER STRIP -->
+<div class="tape-counter">
+  <div class="counter-display" id="counter">000</div>
+  <div class="tape-status">
+    <div class="rec-dot"></div>
+    <span style="font-size:14px; letter-spacing:0.15em; color:var(--red)">REC</span>
+  </div>
+  <div class="tape-scroll">
+    <div class="tape-text">
+      TICONDEROGA SYSTEMS HOLDINGS &nbsp;·&nbsp; WHERE THE WATERS MEET &nbsp;·&nbsp; INDYBLOC NODE ACTIVE &nbsp;·&nbsp; J SONS & WYLD COMING SOON &nbsp;·&nbsp; OWMOSIS ONLINE &nbsp;·&nbsp; ANALOG TO DIGITAL &nbsp;·&nbsp; AC/DC &nbsp;·&nbsp; CRAIG · HAYDEN · WALSENBURG &nbsp;·&nbsp; HALLEY'S OR BUST &nbsp;·&nbsp; HIT PLAY. EVERYTHING'S HANDLED BY END OF TAPE. &nbsp;·&nbsp;
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <div class="quill-line">
+      <div class="quill-text delay1">// now playing · indybloc node · active</div>
+    </div>
+    <div class="quill-line">
+      <div class="quill-text delay2">// ticonderoga.online · systems holding</div>
+    </div>
+
+    <h1>
+      HIT PLAY.<br>
+      <em>EVERYTHING'S<br>HANDLED</em><br>
+      BY END OF<br>THE TAPE.
+    </h1>
+
+    <!-- CASSETTE VISUAL -->
+    <div class="cassette">
+      <div class="cassette-body">
+        <div class="reel"></div>
+        <div>
+          <div class="tape-ribbon"></div>
+        </div>
+        <div class="cassette-label">
+          <strong>TICO · SIDE A</strong>
+          SYSTEMS ACTIVE<br>
+          NODE: INDYBLOC
+        </div>
+        <div class="reel" style="animation-direction:reverse"></div>
+      </div>
+    </div>
+
+    <p class="hero-sub">
+      Ticonderoga is the <strong>junction point</strong> — where analog instinct meets digital infrastructure. We are the conversion layer. <strong>AC to DC.</strong> Answering machine to algorithm. The salmon that swam both rivers so our clients don't have to learn to breathe saltwater alone.
+    </p>
+
+  </div>
+
+  <div class="sprite">
+█████<br>
+█░█░█<br>
+█████<br>
+░███░<br>
+██████
+  </div>
+</section>
+
+<div class="px-divider">████████████████████████████████████████████████████████████████████████████████████████████████████████████████████</div>
+
+<!-- SYSTEMS -->
+<section class="systems">
+  <div class="sys-header">// ACTIVE SYSTEMS</div>
+  <div class="sys-grid">
+
+    <div class="sys-card" data-id="01">
+      <div class="sys-tag">DATA INFRASTRUCTURE</div>
+      <div class="sys-title">TICONDEROGA<br>CRM ENGINE</div>
+      <div class="sys-body">Multi-tenant data routing and billing. Clients send data. We log it, meter it, invoice it. Runs unattended. Franchise-ready. Built for physical businesses crossing into the digital layer.</div>
+    </div>
+
+    <div class="sys-card" data-id="02">
+      <div class="sys-tag">COMMUNITY · BRAND</div>
+      <div class="sys-title">J SONS<br>& WYLD</div>
+      <div class="sys-body">Jekyll & Hyde barbershop — boardroom one side, club-ready the other. One-for-one social mission. Every cut funds reentry barbering and mental health families. Client #1.</div>
+    </div>
+
+    <div class="sys-card" data-id="03">
+      <div class="sys-tag">IDENTITY · CREDENTIALS</div>
+      <div class="sys-title">NFT IDENTITY<br>NODE</div>
+      <div class="sys-body">Resume NFTs. Skill credentials. Sovereign identity tokens. Your work. Your proof. On-chain. For the generation that never had a paper trail that followed them correctly.</div>
+    </div>
+
+    <div class="sys-card" data-id="04">
+      <div class="sys-tag">CONTENT · LEAD GEN</div>
+      <div class="sys-title">MASTER<br>GENERATOR</div>
+      <div class="sys-body">Automated content engine across regional hubs. Craig. Hayden. Walsenburg. Audio-synced. Checksum-verified. Product placement wired into every frame.</div>
+    </div>
+
+    <div class="sys-card" data-id="05">
+      <div class="sys-tag">MUSIC · ARTIST</div>
+      <div class="sys-title">JAN JUPITER<br>· OWMOSIS</div>
+      <div class="sys-body">Rodeo Breakbeats. The artist at the center of the universe. The sound of two worlds colliding at the junction. Grammy trajectory. The whole reason the infrastructure exists.</div>
+    </div>
+
+    <div class="sys-card" data-id="06">
+      <div class="sys-tag">VEHICLE · LORE</div>
+      <div class="sys-title">ZEPHERR<br>· HALLEY'S</div>
+      <div class="sys-body">The train. Steampunk. Alive. Mustached. Chasing something that only comes around once. "Halley's or Bust." The mythological backbone of the Jan Jupiter world.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ORIGIN -->
+<section class="origin">
+  <div class="origin-atari">
+    TICON<br><span>·</span><br>DEROGA
+  </div>
+  <div class="origin-content">
+    <div class="origin-tag">MOHAWK · TEKONTARÓ:KEN · ETYMOLOGY</div>
+    <div class="quill-write">
+      <p><strong>"It is at the junction of two waterways."</strong></p>
+      <p>The oldest generation and the youngest have never been further apart in how their brains work. One was formed before the screen. One was born inside it. We are the salmon — shaped in analog, fluent in digital, alive in both.</p>
+      <p>Ticonderoga is not a tech company. It is a <strong>conversion layer.</strong> AC to DC. The answering machine tape pulling out — and at the tip of it, a quill, still writing. Hit rewind. Everything you need is already recorded.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>READY TO<br>HIT PLAY?</h2>
+  <p>Tell us where you are. We'll handle the rest by end of tape.</p>
+  <div class="btn-row">
+    <a href="#" class="btn btn-primary">START THE CONVERSATION</a>
+    <a href="#" class="btn btn-ghost">VIEW THE SYSTEMS</a>
+  </div>
+</section>
+
+<footer>
+  <div class="f-logo">TICONDEROGA</div>
+  <div class="f-copy">© 2026 TICONDEROGA SYSTEMS HOLDINGS</div>
+  <div class="f-node">nft.ticonderogasystems.xyz · TEAKWOOD ACTIVE</div>
+</footer>
+
+<script>
+// Custom cursor
+const cursor = document.getElementById('cursor');
+document.addEventListener('mousemove', e => {
+  cursor.style.left = e.clientX - 2 + 'px';
+  cursor.style.top = e.clientY - 2 + 'px';
+});
+
+// Tape counter - counts up like a real cassette counter
+let count = 0;
+const counterEl = document.getElementById('counter');
+setInterval(() => {
+  count = (count + 1) % 1000;
+  counterEl.textContent = String(count).padStart(3, '0');
+}, 80);
+
+// Pixel flicker on load
+document.body.style.animation = 'flicker 0.3s steps(2) 1';
+</script>
+
+</body>
+</html>
